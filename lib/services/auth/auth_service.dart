@@ -10,6 +10,15 @@ class AuthService {
   User? getCurrentUser() {
     return _auth.currentUser;
   }
+    // Get the current user's name from Firestore
+  Future<String?> getCurrentUserName() async {
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      return userDoc.data()?['name'];
+    }
+    return null; // Return null if no user is signed in
+  }
 
   /// Sign In with Email and Password
   Future<UserCredential> signInWithEmailPassword(String email, String password) async {
@@ -22,12 +31,15 @@ class AuthService {
       // Optional: Check if user exists in Firestore
      // final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
      // if (!userDoc.exists) {
+     /*
         _firestore.collection('users').doc(userCredential.user!.uid).set({
+         // 'name': name,
           'email': userCredential.user!.email,
           'uid': userCredential.user!.uid,
           'createdAt': FieldValue.serverTimestamp(),
         });
      // }
+     */
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -37,17 +49,19 @@ class AuthService {
   }
 
   /// Sign Up with Email and Password
-  Future<UserCredential> signUpWithEmailPassword(String email, String password) async {
+  Future<UserCredential> signUpWithEmailPassword(String name,String email, String password) async {
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      await userCredential.user!.updateDisplayName(name);
       // Save user data to Firestore
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'email': userCredential.user!.email,
         'uid': userCredential.user!.uid,
+        'name':name,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
